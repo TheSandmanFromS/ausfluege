@@ -254,6 +254,29 @@ input[type="range"] { width: 100%; height: 44px; accent-color: var(--akzent); cu
   position: absolute; top: 14px; left: 14px; background: var(--akzent); color: var(--akzent-text);
   border-radius: 999px; padding: 2px 14px; font-weight: 700; font-size: 0.85rem;
 }
+.galerie-bild { cursor: zoom-in; }
+.galerie .ganz {
+  position: absolute; bottom: 14px; right: 14px; border: 0; cursor: pointer; background: var(--flaeche); color: var(--text);
+  border-radius: 999px; padding: 8px 16px; font-weight: 700; font-size: 0.95rem; box-shadow: var(--schatten);
+}
+.album {
+  position: fixed; inset: 0; z-index: 50; background: #000; display: flex; align-items: center; justify-content: center;
+  padding: calc(70px + env(safe-area-inset-top)) 12px calc(52px + env(safe-area-inset-bottom));
+}
+.album[hidden] { display: none; }
+.album-bild { max-width: 100%; max-height: 100%; width: auto; height: auto; object-fit: contain; display: block; }
+.album-zu {
+  position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; border: 0; cursor: pointer;
+  background: #fff; color: #000; border-radius: 999px; padding: 12px 22px; font-weight: 700; font-size: 1.1rem;
+}
+.album-zahl { position: absolute; top: calc(22px + env(safe-area-inset-top)); right: 18px; color: #fff; font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.album .pfeil {
+  position: absolute; top: calc(50% - 32px); width: 64px; height: 64px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255, 255, 255, 0.85); color: #000; font-size: 2.2rem; line-height: 1;
+}
+.album .pfeil.l { left: 12px; } .album .pfeil.r { right: 12px; }
+.album-nachweis { position: absolute; bottom: calc(12px + env(safe-area-inset-bottom)); left: 16px; right: 16px; margin: 0; color: #aaa; font-size: 0.75rem; text-align: center; overflow-wrap: anywhere; }
+.album-nachweis a { color: inherit; }
 .nachweis { color: var(--leise); font-size: 0.75rem; margin-top: 8px; overflow-wrap: anywhere; }
 .nachweis a { color: inherit; }
 .daumen { display: flex; gap: 8px; overflow-x: auto; padding-block: 12px 4px; scrollbar-width: thin; }
@@ -409,7 +432,7 @@ details.quellen li { overflow-wrap: anywhere; }
   <main class="seite info" id="info" hidden></main>
 </div>
 
-<script type="application/json" id="schloss">{"salz": "Do7boIPdgxTfy4QTqzi/eA==", "iterationen": 600000, "pruefung": "U5AQW7m7cik8arHUxIX4qY+tgBlMZHMIDakUP87ho/PV99kDUT4=", "daten": "d.bin"}</script>
+<script type="application/json" id="schloss">{"salz": "Do7boIPdgxTfy4QTqzi/eA==", "iterationen": 600000, "pruefung": "oIOixnkKjGDYSaOIsueJ0FKAHlxu9njotmoQF8cxKv2O5vxgBys=", "daten": "d.bin"}</script>
 <script>
 (function () {
   'use strict';
@@ -424,7 +447,7 @@ details.quellen li { overflow-wrap: anywhere; }
     ['markt', '🧺', 'Wochenmarkt'], ['therme', '♨️', 'Therme ganz nah'], ['see', '🌊', 'Am See'],
     ['fluss', '🏞️', 'Am Fluss'], ['schiff', '🚢', 'Schiffsfahrt'], ['flach', '🚶', 'Flache Altstadt'],
     ['tiere', '🦁', 'Zoo & Tiere'], ['garten', '🌳', 'Park & Garten'], ['aussicht', '🚡', 'Bergbahn & Aussicht'],
-    ['museum', '🔬', 'Besondere Museen'], ['weihnachtsmarkt', '🎄', 'Weihnachtsmarkt']
+    ['museum', '🔬', 'Besondere Museen'], ['weihnachtsmarkt', '🎄', 'Weihnachtsmarkt'], ['aquaristik', '🐠', 'Aquaristik-Laden nah']
   ];
   var ZEICHEN = { ruhig_ab16: 'Ruhig – nur für Erwachsene', erwachsenenbereich: 'Mit Bereich nur für Erwachsene', familien: 'Für alle Altersgruppen' };
   var BILDART = { luftbild: 'Luftbild', gasse: 'In den Gassen', einkaufen: 'Einkaufen', wahrzeichen: 'Sehenswert', lage: 'Lage' };
@@ -660,6 +683,7 @@ details.quellen li { overflow-wrap: anywhere; }
     return '<div class="galerie">' + img(f[0].b, f[0].titel || o.name, 'galerie-bild') +
       '<span class="bildart" id="g-art">' + esc(BILDART[f[0].typ] || 'Ansicht') + '</span>' +
       '<span class="zaehler" id="g-zahl">1 / ' + f.length + '</span>' +
+      '<button class="ganz" type="button" id="g-ganz">⤢ Ganzes Foto</button>' +
       (f.length > 1 ? '<button class="pfeil l" type="button" id="g-l" aria-label="Vorheriges Foto">‹</button>' +
         '<button class="pfeil r" type="button" id="g-r" aria-label="Nächstes Foto">›</button>' : '') +
       '</div><p class="nachweis" id="g-nachweis"></p>' +
@@ -685,9 +709,53 @@ details.quellen li { overflow-wrap: anywhere; }
       $('g-nachweis').innerHTML = nachweis(f[i]);
       el.querySelectorAll('#g-daumen button').forEach(function (b) { b.setAttribute('aria-current', String(Number(b.dataset.i) === i)); });
       if (f[i + 1]) bildUrl(f[i + 1].b).catch(function () {});
+      if (!alb.hidden) albumBild();
     }
+    // Album: ganzes Foto im Vollbild, nichts abgeschnitten (Mamis Wunsch 10.10.2026)
+    var alb = $('album');
+    if (!alb) {
+      alb = document.createElement('div');
+      alb.id = 'album'; alb.className = 'album'; alb.hidden = true;
+      alb.setAttribute('role', 'dialog'); alb.setAttribute('aria-modal', 'true'); alb.setAttribute('aria-label', 'Fotoalbum');
+      document.body.appendChild(alb);
+      window.addEventListener('hashchange', function () { alb.hidden = true; document.body.style.overflow = ''; });
+    }
+    alb.hidden = true;
+    alb.innerHTML = '<button class="album-zu" type="button" id="a-zu">✕ Schliessen</button><span class="album-zahl" id="a-zahl"></span>' +
+      '<img class="album-bild" id="a-bild" alt="">' +
+      (f.length > 1 ? '<button class="pfeil l" type="button" id="a-l" aria-label="Vorheriges Foto">‹</button>' +
+        '<button class="pfeil r" type="button" id="a-r" aria-label="Nächstes Foto">›</button>' : '') +
+      '<p class="album-nachweis" id="a-nachweis"></p>';
+    function albumBild() {
+      var ab = $('a-bild');
+      ab.classList.remove('da'); ab.removeAttribute('src');
+      ab.setAttribute('data-b', f[i].b); ab.dataset.geladen = ''; ab.alt = f[i].titel || o.name;
+      bildSetzen(ab);
+      $('a-zahl').textContent = (i + 1) + ' / ' + f.length;
+      $('a-nachweis').innerHTML = nachweis(f[i]);
+    }
+    function albumAuf() { alb.hidden = false; document.body.style.overflow = 'hidden'; albumBild(); $('a-zu').focus(); }
+    function albumZu() { alb.hidden = true; document.body.style.overflow = ''; }
+    $('a-zu').addEventListener('click', albumZu);
+    $('g-ganz').addEventListener('click', albumAuf);
+    bild.addEventListener('click', albumAuf);
+    alb.onkeydown = function (e) {
+      if (e.key === 'Escape') albumZu();
+      else if (e.key === 'ArrowLeft' && f.length > 1) zeig(i - 1);
+      else if (e.key === 'ArrowRight' && f.length > 1) zeig(i + 1);
+    };
     $('g-nachweis').innerHTML = nachweis(f[0]);
     if (f.length < 2) return;
+    $('a-l').addEventListener('click', function () { zeig(i - 1); });
+    $('a-r').addEventListener('click', function () { zeig(i + 1); });
+    var a0 = null, ab = $('a-bild');
+    ab.addEventListener('touchstart', function (e) { a0 = e.touches[0].clientX; }, { passive: true });
+    ab.addEventListener('touchend', function (e) {
+      if (a0 === null) return;
+      var dx = e.changedTouches[0].clientX - a0;
+      if (Math.abs(dx) > 40) zeig(i + (dx < 0 ? 1 : -1));
+      a0 = null;
+    });
     $('g-l').addEventListener('click', function () { zeig(i - 1); });
     $('g-r').addEventListener('click', function () { zeig(i + 1); });
     $('g-daumen').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b) zeig(Number(b.dataset.i)); });
@@ -743,6 +811,18 @@ details.quellen li { overflow-wrap: anywhere; }
         '<span class="zeichen ' + esc(t.kennzeichen) + '">' + esc(ZEICHEN[t.kennzeichen] || '') + '</span>',
         '<a class="knopf leicht" target="_blank" rel="noopener" href="' + esc(t.url) + '">🌐 Website</a>');
     }).join('') + '</div><p class="nachweis">geprüft ' + esc(D.stand) + '</p>' : '<p>Keine Therme im Umkreis von 30 km.</p>') + '</section>';
+    var aq = o.aquaristik || {}, ag = aq.geschaefte || [], av = aq.vereine || [];
+    h += '<section class="abschnitt"><h2>Aquaristik</h2>' +
+      (ag.length ? '<div class="gruppe"><h3>Geschäfte</h3><div class="raster">' + ag.map(function (a) {
+        return ding(null, '🐠', a.name, '<p>' + esc(a.text) + '</p><p>' + esc(a.ort) + (a.land !== o.land ? ' (' + LAND[a.land] + ')' : '') + ' · ca. ' + a.km + ' km</p>',
+          '<a class="knopf leicht" target="_blank" rel="noopener" href="' + esc(a.url) + '">🌐 Website</a> ' +
+          '<a class="knopf leicht" target="_blank" rel="noopener" href="' + kartenLink(a.name + ' ' + a.ort) + '">📍 Karte</a>');
+      }).join('') + '</div></div>' : '<p>Kein Aquaristik-Geschäft im Umkreis von 40 km bekannt.</p>') +
+      (av.length ? '<div class="gruppe"><h3>Vereine &amp; Börsen</h3><div class="raster">' + av.map(function (a) {
+        return ding(null, a.art === 'boerse' ? '🗓️' : '👥', a.name, '<p>' + esc(a.text) + '</p><p>' + esc(a.ort) + (a.land !== o.land ? ' (' + LAND[a.land] + ')' : '') + ' · ca. ' + a.km + ' km</p>',
+          '<a class="knopf leicht" target="_blank" rel="noopener" href="' + esc(a.url) + '">🗓️ Termine ansehen</a>');
+      }).join('') + '</div></div>' : '') +
+      '<p class="nachweis">geprüft ' + esc(D.stand) + ' · aktuelle Termine stehen auf den Websites</p></section>';
     var p = o.plakette || {};
     h += '<section class="abschnitt"><h2>Praktisch</h2><div class="praktisch">' +
       '<article class="ding"><div class="ding-text"><h3>🅿️ ' + esc(o.ziel.name) + '</h3>' + (o.ziel.adresse ? '<p>' + esc(o.ziel.adresse) + '</p>' : '') +
